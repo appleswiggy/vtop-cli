@@ -2,6 +2,7 @@ use crate::{
     input::Key,
     network::NetworkEvent,
     state::{AppState, TabState},
+    util::{MAXIMUM_TABS, NOTIFICATION_SEPERATOR},
 };
 
 pub struct Tab {
@@ -71,6 +72,18 @@ impl App {
     }
 
     pub async fn update_on_tick(&mut self) -> AppReturn {
+        if self.state.notifications.len() > 0 {
+            let notification_length = self.state.notifications[self.state.notifications.len() - 1]
+                .text
+                .len();
+
+            if self.state.notification_scroll == notification_length + NOTIFICATION_SEPERATOR.len()
+            {
+                self.state.notification_scroll = 0;
+            } else {
+                self.state.notification_scroll += 1;
+            }
+        }
         AppReturn::Continue
     }
 
@@ -87,7 +100,7 @@ impl App {
     }
 
     pub fn new_tab(&mut self) {
-        if self.state.tabs.len() < 10 {
+        if self.state.tabs.len() < MAXIMUM_TABS {
             let tabs_len = self.state.tabs.len();
             self.state.active_tab = tabs_len;
 

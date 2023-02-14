@@ -19,9 +19,10 @@ use tui::{backend::CrosstermBackend, Terminal};
 pub mod app;
 pub mod input;
 pub mod network;
-pub mod ui;
-pub mod state;
 pub mod pages;
+pub mod state;
+pub mod ui;
+pub mod util;
 
 pub fn panic_hook(info: &PanicInfo<'_>, in_alternate_screen: bool) {
     let msg = match info.payload().downcast_ref::<&'static str>() {
@@ -76,8 +77,16 @@ pub async fn start_ui(app: &Arc<tokio::sync::Mutex<App>>) -> Result<()> {
     let tick_rate = Duration::from_millis(200);
     let mut events = input::KeyEvents::new(tick_rate);
 
+    let mut first_render = true;
+
     loop {
         let mut app = app.lock().await;
+
+        if first_render {
+            // DO SOMETHING AT FIRST RENDER
+            // Like dispatching a notification
+            first_render = false;
+        }
 
         terminal.draw(|rect| ui::draw(rect, &app))?;
 

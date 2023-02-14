@@ -1,4 +1,5 @@
-use crate::{pages::Page, app::Tab};
+use crate::{app::Tab, pages::Page, util::NOTIFICATION_HISTORY_LENGTH};
+use std::time::Instant;
 
 pub struct TabState {
     pub page: Page,
@@ -6,9 +7,7 @@ pub struct TabState {
 
 impl Default for TabState {
     fn default() -> Self {
-        TabState {
-            page: Page::Home
-        }
+        TabState { page: Page::Home }
     }
 }
 
@@ -21,10 +20,26 @@ pub enum Session {
     },
 }
 
+pub struct Notification {
+    pub text: String,
+    pub origin_time: Instant,
+}
+
+impl Notification {
+    pub fn new(text: String) -> Notification {
+        Notification {
+            text,
+            origin_time: Instant::now(),
+        }
+    }
+}
+
 pub struct AppState {
     pub active_tab: usize,
     pub tabs: Vec<Tab>,
     pub session: Session,
+    pub notification_scroll: usize,
+    pub notifications: Vec<Notification>,
 }
 
 impl Default for AppState {
@@ -36,6 +51,8 @@ impl Default for AppState {
                 state: TabState::default(),
             }],
             session: Session::LoggedOut,
+            notification_scroll: 0,
+            notifications: vec![],
         }
     }
 }
@@ -46,5 +63,13 @@ impl AppState {
             Session::LoggedOut => false,
             Session::LoggedIn { .. } => true,
         }
+    }
+
+    pub fn dispatch_notification(&mut self, text: String) {
+        if self.notifications.len() == NOTIFICATION_HISTORY_LENGTH {
+            self.notifications.remove(0);
+        }
+        self.notifications.push(Notification::new(text));
+        self.notification_scroll = 0;
     }
 }
