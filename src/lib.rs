@@ -20,6 +20,8 @@ pub mod app;
 pub mod input;
 pub mod network;
 pub mod ui;
+pub mod state;
+pub mod pages;
 
 pub fn panic_hook(info: &PanicInfo<'_>, in_alternate_screen: bool) {
     let msg = match info.payload().downcast_ref::<&'static str>() {

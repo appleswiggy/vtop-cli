@@ -37,11 +37,13 @@ impl KeyEvents {
                         }
                     }
                 }
-                if let Err(_) = event_tx.send(KeyEvent::Tick).await {
-                    panic!("Failed to read terminal");
-                }
+
                 if event_stop_capture.load(Ordering::Relaxed) {
                     break;
+                } 
+
+                if let Err(_) = event_tx.send(KeyEvent::Tick).await {
+                    panic!("Failed to read terminal");
                 }
             }
         });

@@ -1,4 +1,25 @@
-use crate::{input::Key, network::NetworkEvent};
+use crate::{
+    input::Key,
+    network::NetworkEvent,
+    state::{AppState, TabState},
+};
+
+pub struct Tab {
+    pub title: String,
+    pub state: TabState,
+}
+
+impl Tab {
+    pub fn new(id: usize) -> Tab {
+        Tab {
+            title: format!("Tab {}", id),
+            state: TabState::default(),
+        }
+    }
+    pub fn update_title(&mut self, id: usize) {
+        self.title = format!("Tab {}", id);
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AppReturn {
@@ -7,8 +28,9 @@ pub enum AppReturn {
 }
 
 pub struct App {
-    network_event_tx: tokio::sync::mpsc::Sender<NetworkEvent>,
-    is_loading: bool,
+    pub network_event_tx: tokio::sync::mpsc::Sender<NetworkEvent>,
+    pub is_loading: bool,
+    pub state: AppState,
 }
 
 impl App {
@@ -17,11 +39,35 @@ impl App {
         App {
             network_event_tx,
             is_loading,
+            state: AppState::default(),
         }
     }
 
-    pub async fn do_action(&mut self, _key: Key) -> AppReturn {
-        AppReturn::Continue
+    pub async fn do_action(&mut self, key: Key) -> AppReturn {
+        if let Key::Ctrl(ch) = key {
+            if ch == 'C' || ch == 'c' {
+                return AppReturn::Exit;
+            }
+            if ch == 'T' || ch == 't' {
+                self.new_tab();
+            }
+            if ch == 'W' || ch == 'w' {
+                self.delete_tab();
+            }
+        }
+        if let Key::Left = key {
+            if self.state.active_tab == 0 {
+                self.state.active_tab = self.state.tabs.len() - 1;
+            } else {
+                self.state.active_tab = self.state.active_tab - 1;
+            }
+        }
+
+        if let Key::Right = key {
+            self.state.active_tab = (self.state.active_tab + 1) % self.state.tabs.len();
+        }
+
+        return AppReturn::Continue;
     }
 
     pub async fn update_on_tick(&mut self) -> AppReturn {
@@ -38,5 +84,35 @@ impl App {
 
     pub fn loaded(&mut self) {
         self.is_loading = false;
+    }
+
+    pub fn new_tab(&mut self) {
+        if self.state.tabs.len() < 10 {
+            let tabs_len = self.state.tabs.len();
+            self.state.active_tab = tabs_len;
+
+            self.state.tabs.push(Tab::new(tabs_len + 1));
+        }
+    }
+
+    pub fn delete_tab(&mut self) {
+        if self.state.tabs.len() > 1 {
+            let new_active_tab = if self.state.active_tab == self.state.tabs.len() - 1 {
+                self.state.active_tab - 1
+            } else {
+                self.state.active_tab
+            };
+
+            self.state.tabs.remove(self.state.active_tab);
+            self.state.active_tab = new_active_tab;
+
+            self.rename_all_tabs();
+        }
+    }
+
+    pub fn rename_all_tabs(&mut self) {
+        for i in 1..(self.state.tabs.len() + 1) {
+            self.state.tabs.get_mut(i - 1).unwrap().update_title(i);
+        }
     }
 }
