@@ -45,18 +45,22 @@ impl App {
     }
 
     pub async fn do_action(&mut self, key: Key) -> AppReturn {
+        self.state.dispatch_notification(key.to_string());
         if let Key::Ctrl(ch) = key {
-            if ch == 'C' || ch == 'c' {
-                return AppReturn::Exit;
-            }
-            if ch == 'T' || ch == 't' {
-                self.new_tab();
-            }
-            if ch == 'W' || ch == 'w' {
-                self.delete_tab();
+            match ch {
+                'C' | 'c' => return AppReturn::Exit,
+                'T' | 't' => self.new_tab(),
+                'W' | 'w' => self.delete_tab(),
+                _ => (),
             }
         }
-        if let Key::Left = key {
+        if let Key::Char(ch) = key {
+            match ch {
+                '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '(' | ')' => self.switch_tab(ch),
+                _ => (),
+            }
+        }
+        if let Key::CtrlLeft | Key::CtrlDown = key {
             if self.state.active_tab == 0 {
                 self.state.active_tab = self.state.tabs.len() - 1;
             } else {
@@ -64,7 +68,7 @@ impl App {
             }
         }
 
-        if let Key::Right = key {
+        if let Key::CtrlRight | Key::CtrlUp = key {
             self.state.active_tab = (self.state.active_tab + 1) % self.state.tabs.len();
         }
 
@@ -105,6 +109,9 @@ impl App {
             self.state.active_tab = tabs_len;
 
             self.state.tabs.push(Tab::new(tabs_len + 1));
+        } else {
+            self.state
+                .dispatch_notification("Maximum of 10 tabs are allowed!".to_string());
         }
     }
 
@@ -120,6 +127,27 @@ impl App {
             self.state.active_tab = new_active_tab;
 
             self.rename_all_tabs();
+        }
+    }
+
+    pub fn switch_tab(&mut self, ch: char) {
+        // let index: usize = ch.to_digit(10).unwrap() as usize;
+        let index: usize = match ch {
+            '!' => 0,
+            '@' => 1,
+            '#' => 2,
+            '$' => 3,
+            '%' => 4,
+            '^' => 5,
+            '&' => 6,
+            '*' => 7,
+            '(' => 8,
+            ')' => 9,
+            _ => 0,
+        };
+
+        if index < self.state.tabs.len() {
+            self.state.active_tab = index;
         }
     }
 

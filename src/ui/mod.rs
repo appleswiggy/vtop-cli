@@ -6,7 +6,7 @@ use tui::widgets::{Block, Borders, Paragraph};
 use tui::Frame;
 
 use crate::app::App;
-use crate::util::{MAXIMUM_TABS, NOTIFICATION_SEPERATOR};
+use crate::util::{MAXIMUM_TABS, NOTIFICATION_SEPERATOR, NOTIFICATION_TIMEOUT_SECS};
 
 pub fn draw<B>(rect: &mut Frame<B>, app: &App)
 where
@@ -26,6 +26,8 @@ where
         .split(rect.size());
 
     draw_tabs(rect, app, parent_layout[0]);
+
+    draw_debug(rect, app, parent_layout[1]);
 
     draw_notifications_footer(rect, app, parent_layout[2]);
 }
@@ -89,8 +91,8 @@ where
         || app.state.notifications[app.state.notifications.len() - 1]
             .origin_time
             .elapsed()
-            .as_secs()
-            > 30
+            .as_secs() as usize
+            > NOTIFICATION_TIMEOUT_SECS
     {
         let spans = vec![
             Span::raw("Made with "),
@@ -144,4 +146,21 @@ where
     };
 
     f.render_widget(footer_paragraph, layout_chunk);
+}
+
+pub fn draw_debug<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+where
+    B: Backend,
+{
+    let mut v = vec![];    
+
+    for i in (0..app.state.notifications.len()).rev() {
+        v.push(Spans::from(app.state.notifications[i].text.clone()));
+    }
+
+    let debug_paragraph = Paragraph::new(v)
+        .alignment(tui::layout::Alignment::Center)
+        .block(Block::default().borders(Borders::ALL).title("DEBUG WINDOW"));
+
+    f.render_widget(debug_paragraph, layout_chunk);
 }

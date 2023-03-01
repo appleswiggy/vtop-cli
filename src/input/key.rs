@@ -8,6 +8,8 @@ pub enum Key {
     Enter,
     /// Tabulation key
     Tab,
+    /// Back Tabulation key
+    ShiftTab,
     /// Backspace key
     Backspace,
     /// Escape key
@@ -61,6 +63,15 @@ pub enum Key {
     F11,
     /// F12 key
     F12,
+    /// Ctrl + Up
+    CtrlUp,
+    /// Ctrl + Down 
+    CtrlDown,
+    /// Ctrl + Left
+    CtrlLeft,
+    /// Ctrl + Right
+    CtrlRight, 
+
     Char(char),
     Ctrl(char),
     Alt(char),
@@ -107,6 +118,7 @@ impl fmt::Display for Key {
             Key::Left | Key::Right | Key::Up | Key::Down => write!(f, "<{:?} Arrow Key>", self),
             Key::Enter
             | Key::Tab
+            | Key::ShiftTab
             | Key::Backspace
             | Key::Esc
             | Key::Ins
@@ -115,6 +127,10 @@ impl fmt::Display for Key {
             | Key::End
             | Key::PageUp
             | Key::PageDown => write!(f, "<{:?}>", self),
+            Key::CtrlUp => write!(f, "<Ctrl+Up>"),
+            Key::CtrlDown => write!(f, "<Ctrl+Down>"),
+            Key::CtrlLeft => write!(f, "<Ctrl+Left>"),
+            Key::CtrlRight => write!(f, "<Ctrl+Right>"),
             _ => write!(f, "{:?}", self),
         }
     }
@@ -133,16 +149,36 @@ impl From<event::KeyEvent> for Key {
             } => Key::Backspace,
             event::KeyEvent {
                 code: event::KeyCode::Left,
+                modifiers: event::KeyModifiers::CONTROL,
+                ..
+            } => Key::CtrlLeft,
+            event::KeyEvent {
+                code: event::KeyCode::Left,
                 ..
             } => Key::Left,
+            event::KeyEvent {
+                code: event::KeyCode::Right,
+                modifiers: event::KeyModifiers::CONTROL,
+                ..
+            } => Key::CtrlRight,
             event::KeyEvent {
                 code: event::KeyCode::Right,
                 ..
             } => Key::Right,
             event::KeyEvent {
                 code: event::KeyCode::Up,
+                modifiers: event::KeyModifiers::CONTROL,
+                ..
+            } => Key::CtrlUp,
+            event::KeyEvent {
+                code: event::KeyCode::Up,
                 ..
             } => Key::Up,
+            event::KeyEvent {
+                code: event::KeyCode::Down,
+                modifiers: event::KeyModifiers::CONTROL,
+                ..
+            } => Key::CtrlDown,
             event::KeyEvent {
                 code: event::KeyCode::Down,
                 ..
@@ -183,6 +219,10 @@ impl From<event::KeyEvent> for Key {
                 code: event::KeyCode::Tab,
                 ..
             } => Key::Tab,
+            event::KeyEvent {
+                code: event::KeyCode::BackTab,
+                ..
+            } => Key::ShiftTab,
 
             // First check for char + modifier
             event::KeyEvent {
@@ -190,6 +230,8 @@ impl From<event::KeyEvent> for Key {
                 modifiers: event::KeyModifiers::ALT,
                 ..
             } => Key::Alt(c),
+
+            
             event::KeyEvent {
                 code: event::KeyCode::Char(c),
                 modifiers: event::KeyModifiers::CONTROL,

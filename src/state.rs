@@ -40,6 +40,7 @@ pub struct AppState {
     pub session: Session,
     pub notification_scroll: usize,
     pub notifications: Vec<Notification>,
+    pub active_block: Option<usize>
 }
 
 impl Default for AppState {
@@ -53,6 +54,7 @@ impl Default for AppState {
             session: Session::LoggedOut,
             notification_scroll: 0,
             notifications: vec![],
+            active_block: None,
         }
     }
 }

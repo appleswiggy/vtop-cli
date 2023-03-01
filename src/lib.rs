@@ -85,6 +85,7 @@ pub async fn start_ui(app: &Arc<tokio::sync::Mutex<App>>) -> Result<()> {
         if first_render {
             // DO SOMETHING AT FIRST RENDER
             // Like dispatching a notification
+            // app.state.dispatch_notification("Long notification string hello hello hello".to_string());
             first_render = false;
         }
 
