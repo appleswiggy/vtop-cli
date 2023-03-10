@@ -1,4 +1,4 @@
-use app::{App, AppReturn};
+use app::App;
 use backtrace::Backtrace;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -91,12 +91,12 @@ pub async fn start_ui(app: &Arc<tokio::sync::Mutex<App>>) -> Result<()> {
 
         terminal.draw(|rect| ui::draw(rect, &app))?;
 
-        let app_return = match events.next().await {
+        match events.next().await {
             KeyEvent::Input(key) => app.do_action(key).await,
             KeyEvent::Tick => app.update_on_tick().await,
-        };
+        }
 
-        if app_return == AppReturn::Exit {
+        if app.exit_app == true {
             events.close();
             break;
         }

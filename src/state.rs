@@ -2,12 +2,24 @@ use crate::{app::Tab, pages::Page, util::NOTIFICATION_HISTORY_LENGTH};
 use std::time::Instant;
 
 pub struct TabState {
+    pub blocks: Blocks,
     pub page: Page,
 }
 
 impl Default for TabState {
     fn default() -> Self {
-        TabState { page: Page::Home }
+        TabState {
+            blocks: Blocks {
+                interactive_blocks: 3,
+                active_block: None,
+                hovered_block: Some(1),
+            },
+            page: Page::Debug {
+                interactive_blocks: 2,
+                active_block: None,
+                hovered_block: None,
+            },
+        }
     }
 }
 
@@ -18,6 +30,12 @@ pub enum Session {
         jsessionid: String,
         csrf_token: String,
     },
+}
+
+pub struct Blocks {
+    pub interactive_blocks: usize,
+    pub active_block: Option<usize>,
+    pub hovered_block: Option<usize>,
 }
 
 pub struct Notification {
@@ -40,7 +58,6 @@ pub struct AppState {
     pub session: Session,
     pub notification_scroll: usize,
     pub notifications: Vec<Notification>,
-    pub active_block: Option<usize>
 }
 
 impl Default for AppState {
@@ -48,13 +65,12 @@ impl Default for AppState {
         AppState {
             active_tab: 0,
             tabs: vec![Tab {
-                title: String::from("Tab 1"),
+                title: String::from("New Tab"),
                 state: TabState::default(),
             }],
             session: Session::LoggedOut,
             notification_scroll: 0,
             notifications: vec![],
-            active_block: None,
         }
     }
 }
