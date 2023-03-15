@@ -1,7 +1,6 @@
 use crate::{
     input::Key,
     network::NetworkEvent,
-    pages::Page,
     state::{AppState, TabState},
     util::{MAXIMUM_TABS, NOTIFICATION_SEPERATOR},
 };
@@ -73,119 +72,11 @@ impl App {
         }
     }
 
-    pub async fn handle_other_keys(&mut self, key: Key) {
-        if let Some(true) | None = self.key_processed {
-            return;
-        }
-
-        if let None = self.state.tabs[self.state.active_tab]
-            .state
-            .blocks
-            .active_block
-        {
-            let tab_state = &mut self.state.tabs[self.state.active_tab].state;
-
-            if let Some(hovered_block_index) = tab_state.blocks.hovered_block {
-                if let Key::Tab | Key::Right | Key::Down = key {
-                    tab_state.blocks.hovered_block =
-                        Some((hovered_block_index + 1) % tab_state.blocks.interactive_blocks);
-
-                    self.key_processed = Some(true);
-                } else if let Key::ShiftTab | Key::Left | Key::Up = key {
-                    if let Some(0) = tab_state.blocks.hovered_block {
-                        tab_state.blocks.hovered_block =
-                            Some(tab_state.blocks.interactive_blocks - 1);
-                    } else {
-                        tab_state.blocks.hovered_block = Some(hovered_block_index - 1);
-                    }
-
-                    self.key_processed = Some(true);
-                }
-
-                if let Key::Enter = key {
-                    tab_state.blocks.active_block = Some(hovered_block_index);
-
-                    if let Some(1) = tab_state.blocks.active_block {
-                        if let Page::Debug {
-                            ref mut hovered_block,
-                            ..
-                        } = self.state.tabs[self.state.active_tab].state.page
-                        {
-                            *hovered_block = Some(0);
-                        }
-                    }
-
-                    self.key_processed = Some(true);
-                }
-            }
-        } else {
-            if let Page::Debug {
-                active_block: None,
-                ref mut hovered_block,
-                ..
-            } = self.state.tabs[self.state.active_tab].state.page
-            {
-                if let Key::Esc = key {
-                    *hovered_block = None;
-
-                    self.state.tabs[self.state.active_tab]
-                        .state
-                        .blocks
-                        .active_block = None;
-
-                    self.key_processed = Some(true);
-                }
-            }
-
-            self.handle_debug_window_keys(key).await;
-        }
-    }
-
-    pub async fn handle_debug_window_keys(&mut self, key: Key) {
-        if let Some(true) | None = self.key_processed {
-            return;
-        }
-        if let Page::Debug {
-            interactive_blocks,
-            ref mut active_block,
-            ref mut hovered_block,
-        } = self.state.tabs[self.state.active_tab].state.page
-        {
-            if let None = active_block {
-                if let Some(hovered_block_index) = *hovered_block {
-                    if let Key::Tab | Key::Right | Key::Down = key {
-                        *hovered_block = Some((hovered_block_index + 1) % interactive_blocks);
-
-                        self.key_processed = Some(true);
-                    } else if let Key::ShiftTab | Key::Left | Key::Up = key {
-                        if let Some(0) = *hovered_block {
-                            *hovered_block = Some(interactive_blocks - 1);
-                        } else {
-                            *hovered_block = Some(hovered_block_index - 1);
-                        }
-
-                        self.key_processed = Some(true);
-                    }
-
-                    if let Key::Enter = key {
-                        *active_block = Some(hovered_block_index);
-                        self.key_processed = Some(true);
-                    }
-                }
-            } else {
-                if let Key::Esc = key {
-                    *active_block = None;
-                }
-            }
-        }
-    }
-
     pub async fn do_action(&mut self, key: Key) {
         self.key_processed = Some(false);
         self.state.dispatch_notification(key.to_string()); // DEBUG
 
         self.handle_global_keys(key).await;
-        self.handle_other_keys(key).await;
 
         self.key_processed = None;
     }
@@ -241,14 +132,12 @@ impl App {
 
             self.state.tabs.remove(self.state.active_tab);
             self.state.active_tab = new_active_tab;
-            // self.rename_all_tabs();
         }
 
         self.key_processed = Some(true);
     }
 
     pub fn switch_tab(&mut self, ch: char) {
-        // let index: usize = ch.to_digit(10).unwrap() as usize;
         let index: usize = match ch {
             '!' => 0,
             '@' => 1,

@@ -1,24 +1,24 @@
-use crate::{app::Tab, pages::Page, util::NOTIFICATION_HISTORY_LENGTH};
+use crate::{
+    app::Tab,
+    pages::{Block, BlockType, Page, PageBlock},
+    util::NOTIFICATION_HISTORY_LENGTH,
+};
 use std::time::Instant;
 
 pub struct TabState {
-    pub blocks: Blocks,
-    pub page: Page,
+    pub page_block: PageBlock,
 }
 
 impl Default for TabState {
     fn default() -> Self {
+        let default_page = Page::Debug;
+
         TabState {
-            blocks: Blocks {
-                interactive_blocks: 3,
-                active_block: None,
-                hovered_block: Some(1),
-            },
-            page: Page::Debug {
-                interactive_blocks: 2,
-                active_block: None,
-                hovered_block: None,
-            },
+            page_block: PageBlock {
+                page: default_page,
+                block: Block::default(default_page.to_string(), BlockType::ContainerBlock),
+            }
+            .fill_inner_blocks(),
         }
     }
 }
@@ -30,12 +30,6 @@ pub enum Session {
         jsessionid: String,
         csrf_token: String,
     },
-}
-
-pub struct Blocks {
-    pub interactive_blocks: usize,
-    pub active_block: Option<usize>,
-    pub hovered_block: Option<usize>,
 }
 
 pub struct Notification {
