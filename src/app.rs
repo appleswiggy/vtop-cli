@@ -1,3 +1,10 @@
+use std::io::stdout;
+
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+};
+
 use crate::{
     input::Key,
     network::NetworkEvent,
@@ -28,6 +35,7 @@ pub struct App {
     pub state: AppState,
     pub key_processed: Option<bool>,
     pub exit_app: bool,
+    pub mouse_capture: bool,
 }
 
 impl App {
@@ -39,6 +47,7 @@ impl App {
             state: AppState::default(),
             key_processed: None,
             exit_app: false,
+            mouse_capture: true,
         }
     }
 
@@ -48,6 +57,7 @@ impl App {
                 'C' | 'c' => self.exit_app = true,
                 'T' | 't' => self.new_tab(),
                 'W' | 'w' => self.delete_tab(),
+                'E' | 'e' => self.toggle_mouse_capture(),
                 _ => (),
             }
         }
@@ -157,5 +167,19 @@ impl App {
         }
 
         self.key_processed = Some(true);
+    }
+
+    fn toggle_mouse_capture(&mut self) {
+        if self.mouse_capture {
+            execute!(stdout(), DisableMouseCapture).expect("Unable to disable mouse capture.");
+            self.state
+                .dispatch_notification("Mouse capture disabled.".to_string());
+            self.mouse_capture = false;
+        } else {
+            execute!(stdout(), EnableMouseCapture).expect("Unable to enable mouse capture.");
+            self.state
+                .dispatch_notification("Mouse capture enabled.".to_string());
+            self.mouse_capture = true;
+        }
     }
 }
