@@ -68,16 +68,16 @@ impl App {
             }
         }
         if let Key::CtrlLeft | Key::CtrlUp = key {
-            if self.state.active_tab == 0 {
-                self.state.active_tab = self.state.tabs.len() - 1;
+            if self.state.selected_tab == 0 {
+                self.state.selected_tab = self.state.tabs.len() - 1;
             } else {
-                self.state.active_tab = self.state.active_tab - 1;
+                self.state.selected_tab = self.state.selected_tab - 1;
             }
             self.key_processed = Some(true);
         }
 
         if let Key::CtrlRight | Key::CtrlDown = key {
-            self.state.active_tab = (self.state.active_tab + 1) % self.state.tabs.len();
+            self.state.selected_tab = (self.state.selected_tab + 1) % self.state.tabs.len();
             self.key_processed = Some(true);
         }
     }
@@ -87,6 +87,9 @@ impl App {
         self.state.dispatch_notification(key.to_string()); // DEBUG
 
         self.handle_global_keys(key).await;
+
+        let page = &mut self.state.tabs[self.state.selected_tab].state.page_block;
+        page.block.handle_input(key);
 
         self.key_processed = None;
     }
@@ -121,7 +124,7 @@ impl App {
     pub fn new_tab(&mut self) {
         if self.state.tabs.len() < MAXIMUM_TABS {
             let tabs_len = self.state.tabs.len();
-            self.state.active_tab = tabs_len;
+            self.state.selected_tab = tabs_len;
 
             self.state.tabs.push(Tab::new("New Tab".to_string()));
         } else {
@@ -134,14 +137,14 @@ impl App {
 
     pub fn delete_tab(&mut self) {
         if self.state.tabs.len() > 1 {
-            let new_active_tab = if self.state.active_tab == self.state.tabs.len() - 1 {
-                self.state.active_tab - 1
+            let new_selected_tab = if self.state.selected_tab == self.state.tabs.len() - 1 {
+                self.state.selected_tab - 1
             } else {
-                self.state.active_tab
+                self.state.selected_tab
             };
 
-            self.state.tabs.remove(self.state.active_tab);
-            self.state.active_tab = new_active_tab;
+            self.state.tabs.remove(self.state.selected_tab);
+            self.state.selected_tab = new_selected_tab;
         }
 
         self.key_processed = Some(true);
@@ -163,7 +166,7 @@ impl App {
         };
 
         if index < self.state.tabs.len() {
-            self.state.active_tab = index;
+            self.state.selected_tab = index;
         }
 
         self.key_processed = Some(true);

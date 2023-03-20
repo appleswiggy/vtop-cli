@@ -27,7 +27,7 @@ where
 
     draw_tabs(rect, app, parent_layout[0]);
 
-    match app.state.tabs[app.state.active_tab].state.page_block.page {
+    match app.state.tabs[app.state.selected_tab].state.page_block.page {
         Page::Debug => DebugPage::draw(rect, app, parent_layout[1]),
         _ => (),
     }
@@ -39,26 +39,26 @@ pub fn draw_tabs<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    let mut before_active_tab = String::from("|");
-    let mut after_active_tab = String::from("|");
+    let mut before_selected_tab = String::from("|");
+    let mut after_selected_tab = String::from("|");
 
     for i in 0..app.state.tabs.len() {
-        if i < app.state.active_tab {
-            before_active_tab += &format!(" {} |", app.state.tabs[i].title.clone());
-        } else if i > app.state.active_tab {
-            after_active_tab += &format!(" {} |", app.state.tabs[i].title.clone());
+        if i < app.state.selected_tab {
+            before_selected_tab += &format!(" {} |", app.state.tabs[i].title.clone());
+        } else if i > app.state.selected_tab {
+            after_selected_tab += &format!(" {} |", app.state.tabs[i].title.clone());
         }
     }
 
     let mut spans = vec![
-        Span::raw(before_active_tab),
+        Span::raw(before_selected_tab),
         Span::styled(
-            format!(" {} ", app.state.tabs[app.state.active_tab].title.clone()),
+            format!(" {} ", app.state.tabs[app.state.selected_tab].title.clone()),
             Style::default()
                 .fg(Color::LightCyan)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(after_active_tab),
+        Span::raw(after_selected_tab),
     ];
 
     if app.state.tabs.len() < MAXIMUM_TABS {

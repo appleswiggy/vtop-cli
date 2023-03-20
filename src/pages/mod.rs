@@ -3,16 +3,12 @@ use std::{
     slice::Iter,
 };
 
-use tui::{
-    backend::Backend,
-    layout::{Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Borders, Paragraph},
-    Frame,
-};
+use tui::widgets::Borders;
 
-use crate::{app::App, input::Key};
+use crate::input::Key;
+pub use debug::DebugPage;
+
+mod debug;
 
 #[derive(Copy, Clone)]
 pub enum Page {
@@ -76,107 +72,17 @@ pub struct PageBlock {
 }
 
 impl PageBlock {
-    pub fn fill_inner_blocks(mut self) -> Self {
+    pub fn init_page(mut self) -> Self {
+        // fill inner blocks
         match self.page {
             Page::Debug => DebugPage::fill_inner_blocks(&mut self.block),
             _ => (),
         }
 
-        self
-    }
-}
+        self.block.select_border();
+        self.block.hover_first_block();
 
-pub struct DebugPage {}
-
-impl DebugPage {
-    pub fn fill_inner_blocks(block: &mut Block) {
-        let temp1 = Block::default("Notifications".to_string(), BlockType::ParagraphBlock);
-        block.append_inner_block(temp1).unwrap();
-
-        let temp2 = Block::default("Temp Block".to_string(), BlockType::ParagraphBlock);
-        block.append_inner_block(temp2).unwrap();
-    }
-
-    pub fn draw<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
-    where
-        B: Backend,
-    {
-        let page_block = &app.state.tabs[app.state.active_tab].state.page_block.block;
-
-        let outer_block = tui::widgets::Block::default()
-            .borders(page_block.border())
-            .title(Span::styled(
-                format!(" {} ", page_block.title()),
-                Style::default()
-                    .fg(Color::LightCyan)
-                    .add_modifier(Modifier::BOLD),
-            ))
-            .border_style(match page_block.border {
-                BlockBorder::NoBorder => Style::default(),
-                BlockBorder::Border {
-                    is_active,
-                    is_highlighted,
-                } => {
-                    if is_active {
-                        Style::default().fg(Color::LightCyan)
-                    } else if is_highlighted {
-                        Style::default().fg(Color::Magenta)
-                    } else {
-                        Style::default()
-                    }
-                }
-            });
-
-        f.render_widget(outer_block, layout_chunk);
-
-        let layout = Layout::default()
-            .direction(tui::layout::Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Length(3)].as_ref())
-            .margin(2)
-            .split(layout_chunk);
-
-        let mut v = vec![];
-
-        for i in (0..app.state.notifications.len()).rev() {
-            v.push(Spans::from(app.state.notifications[i].text.clone()));
-        }
-
-        if let BlockContent::ContainerBlock {
-            inner_blocks,
-            active_block,
-            hovered_block,
-        } = &page_block.content
-        {
-            let notification_history = Paragraph::new(v)
-                .alignment(tui::layout::Alignment::Center)
-                .block(
-                    tui::widgets::Block::default()
-                        .title(format!(" {} ", inner_blocks[0].title()))
-                        .borders(inner_blocks[0].border())
-                        .border_style(if let Some(0) = active_block {
-                            Style::default().fg(Color::LightCyan)
-                        } else if let Some(0) = hovered_block {
-                            Style::default()
-                        } else {
-                            Style::default()
-                        }),
-                );
-
-            f.render_widget(notification_history, layout[0]);
-
-            let temp_block = tui::widgets::Block::default()
-                .title(format!(" {} ", inner_blocks[1].title()))
-                .borders(inner_blocks[1].border())
-                .border_style(if let Some(1) = active_block {
-                    Style::default().fg(Color::LightCyan)
-                } else if let Some(1) = hovered_block {
-                    Style::default()
-                } else {
-                    Style::default()
-                });
-
-            f.render_widget(temp_block, layout[1]);
-        }
+        return self;
     }
 }
 
@@ -197,7 +103,7 @@ pub enum BlockContent {
     Button,
     ContainerBlock {
         inner_blocks: Vec<Block>,
-        active_block: Option<usize>,
+        selected_block: Option<usize>,
         hovered_block: Option<usize>,
     },
 }
@@ -205,7 +111,7 @@ pub enum BlockContent {
 pub enum BlockBorder {
     NoBorder,
     Border {
-        is_active: bool,
+        is_selected: bool,
         is_highlighted: bool,
     },
 }
@@ -236,7 +142,7 @@ impl Block {
                 BlockType::Button => BlockContent::Button,
                 BlockType::ContainerBlock => BlockContent::ContainerBlock {
                     inner_blocks: vec![],
-                    active_block: None,
+                    selected_block: None,
                     hovered_block: None,
                 },
             },
@@ -264,9 +170,29 @@ impl Block {
 
     pub fn add_border(&mut self) {
         self.border = BlockBorder::Border {
-            is_active: false,
+            is_selected: false,
             is_highlighted: false,
         };
+    }
+
+    pub fn select_border(&mut self) {
+        if let BlockBorder::Border {
+            ref mut is_selected,
+            ..
+        } = self.border
+        {
+            *is_selected = true;
+        }
+    }
+
+    pub fn highlight_border(&mut self) {
+        if let BlockBorder::Border {
+            ref mut is_highlighted,
+            ..
+        } = self.border
+        {
+            *is_highlighted = true;
+        }
     }
 
     pub fn border(&self) -> Borders {
@@ -289,7 +215,43 @@ impl Block {
         }
     }
 
-    pub fn hovered_block_right(&mut self) {
+    pub fn get_inner_blocks_mut(&mut self) -> Result<&mut Vec<Block>, &str> {
+        if let BlockContent::ContainerBlock {
+            ref mut inner_blocks,
+            ..
+        } = self.content
+        {
+            Ok(inner_blocks)
+        } else {
+            Err("Can only get inner blocks from container blocks.")
+        }
+    }
+
+    pub fn get_inner_blocks(&self) -> Result<&Vec<Block>, &str> {
+        if let BlockContent::ContainerBlock {
+            ref inner_blocks, ..
+        } = self.content
+        {
+            Ok(inner_blocks)
+        } else {
+            Err("Can only get inner blocks from container blocks.")
+        }
+    }
+
+    pub fn hover_first_block(&mut self) {
+        if let BlockContent::ContainerBlock {
+            ref inner_blocks,
+            ref mut hovered_block,
+            ..
+        } = self.content
+        {
+            if inner_blocks.len() != 0 {
+                *hovered_block = Some(0);
+            }
+        }
+    }
+
+    pub fn hover_block_right(&mut self) {
         if let BlockContent::ContainerBlock {
             ref inner_blocks,
             ref mut hovered_block,
@@ -302,7 +264,7 @@ impl Block {
         }
     }
 
-    pub fn hovered_block_left(&mut self) {
+    pub fn hover_block_left(&mut self) {
         if let BlockContent::ContainerBlock {
             ref inner_blocks,
             ref mut hovered_block,
@@ -319,5 +281,65 @@ impl Block {
         }
     }
 
-    pub fn handle_input(&mut self, _key: Key) {}
+    pub fn deselect(&mut self) {
+        if let BlockContent::ContainerBlock {
+            ref mut inner_blocks,
+            ref mut selected_block,
+            ref mut hovered_block,
+        } = self.content
+        {
+            *selected_block = None;
+            *hovered_block = None;
+
+            for block in inner_blocks {
+                block.deselect();
+            }
+        }
+    }
+
+    pub fn has_selected_child(&mut self) -> bool {
+        if let BlockContent::ContainerBlock { selected_block, .. } = self.content {
+            return selected_block.is_some();
+        }
+
+        return false;
+    }
+
+    pub fn handle_input(&mut self, key: Key) {
+        if let BlockContent::ContainerBlock {
+            ref mut inner_blocks,
+            ref mut selected_block,
+            ref mut hovered_block,
+        } = self.content
+        {
+            // what if innerblocks.len() is 0
+            if hovered_block.is_none() {
+                *hovered_block = Some(0);
+            }
+
+            if selected_block.is_none() {
+                if let Key::Tab | Key::Right | Key::Down = key {
+                    self.hover_block_right();
+                } else if let Key::ShiftTab | Key::Left | Key::Up = key {
+                    self.hover_block_left();
+                } else if let Key::Enter = key {
+                    *selected_block = Some(hovered_block.unwrap());
+                    inner_blocks[selected_block.unwrap()].hover_first_block();
+                }
+                // }
+            } else {
+                let mut flag = false;
+                if let Key::Esc = key {
+                    if inner_blocks[selected_block.unwrap()].has_selected_child() == false {
+                        inner_blocks[selected_block.unwrap()].deselect();
+                        *selected_block = None;
+                        flag = true;
+                    }
+                }
+                if flag == false {
+                    inner_blocks[selected_block.unwrap()].handle_input(key);
+                }
+            }
+        }
+    }
 }

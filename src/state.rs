@@ -18,7 +18,7 @@ impl Default for TabState {
                 page: default_page,
                 block: Block::default(default_page.to_string(), BlockType::ContainerBlock),
             }
-            .fill_inner_blocks(),
+            .init_page(),
         }
     }
 }
@@ -47,7 +47,7 @@ impl Notification {
 }
 
 pub struct AppState {
-    pub active_tab: usize,
+    pub selected_tab: usize,
     pub tabs: Vec<Tab>,
     pub session: Session,
     pub notification_scroll: usize,
@@ -57,7 +57,7 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         AppState {
-            active_tab: 0,
+            selected_tab: 0,
             tabs: vec![Tab {
                 title: String::from("New Tab"),
                 state: TabState::default(),
