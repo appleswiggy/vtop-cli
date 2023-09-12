@@ -9,7 +9,7 @@ use tui::{
 
 use crate::app::App;
 
-use super::{Block, BlockBorder, BlockContent, BlockType};
+use super::{Block, BlockContent, BlockType};
 
 pub struct DebugPage {}
 
@@ -44,32 +44,6 @@ impl DebugPage {
             .state
             .page_block
             .block;
-
-        let outer_block = tui::widgets::Block::default()
-            .borders(block_self.border())
-            .title(Span::styled(
-                format!(" {} ", block_self.title()),
-                Style::default()
-                    .fg(Color::LightCyan)
-                    .add_modifier(Modifier::BOLD),
-            ))
-            .border_style(match block_self.border {
-                BlockBorder::NoBorder => Style::default(),
-                BlockBorder::Border {
-                    is_selected,
-                    is_highlighted,
-                } => {
-                    if is_selected {
-                        Style::default().fg(Color::LightCyan)
-                    } else if is_highlighted {
-                        Style::default().fg(Color::Magenta)
-                    } else {
-                        Style::default()
-                    }
-                }
-            });
-
-        f.render_widget(outer_block, layout_chunk);
 
         let layout = Layout::default()
             .direction(tui::layout::Direction::Vertical)
@@ -112,8 +86,6 @@ impl DebugPage {
                 .constraints([Constraint::Min(1), Constraint::Length(7)].as_ref())
                 .margin(2)
                 .split(layout[0]);
-
-            // let notification_history = Paragraph::new(v).alignment(tui::layout::Alignment::Center);
 
             if let BlockContent::ContainerBlock {
                 inner_blocks,

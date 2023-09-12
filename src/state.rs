@@ -1,24 +1,29 @@
 use crate::{
     app::Tab,
-    pages::{Block, BlockType, Page, PageBlock},
+    pages::{Page, PageBlock},
     util::NOTIFICATION_HISTORY_LENGTH,
 };
 use std::time::Instant;
 
 pub struct TabState {
     pub page_block: PageBlock,
+    pub sidebar_hover: usize,
+    pub active_window: Option<Window>,
+    pub hovered_window: Option<Window>,
 }
 
 impl Default for TabState {
     fn default() -> Self {
         let default_page = Page::Debug;
+        let sidebar_hover = Page::iterator()
+            .position(|page| page.to_string() == default_page.to_string())
+            .unwrap();
 
         TabState {
-            page_block: PageBlock {
-                page: default_page,
-                block: Block::default(default_page.to_string(), BlockType::ContainerBlock),
-            }
-            .init_page(),
+            page_block: PageBlock::new(default_page),
+            sidebar_hover,
+            active_window: None,
+            hovered_window: Some(Window::SidebarWindow),
         }
     }
 }
@@ -44,6 +49,12 @@ impl Notification {
             origin_time: Instant::now(),
         }
     }
+}
+
+#[derive(Clone)]
+pub enum Window {
+    SidebarWindow,
+    PageWindow,
 }
 
 pub struct AppState {

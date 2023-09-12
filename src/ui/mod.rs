@@ -2,11 +2,12 @@ use tui::backend::Backend;
 use tui::layout::{Constraint, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans, Text};
-use tui::widgets::{Block, Borders, Paragraph};
+use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 use tui::Frame;
 
 use crate::app::App;
-use crate::pages::{DebugPage, Page};
+use crate::pages::Page;
+use crate::state::Window;
 use crate::util::{MAXIMUM_TABS, NOTIFICATION_SEPERATOR, NOTIFICATION_TIMEOUT_SECS};
 
 pub fn draw<B>(rect: &mut Frame<B>, app: &App)
@@ -27,10 +28,19 @@ where
 
     draw_tabs(rect, app, parent_layout[0]);
 
-    match app.state.tabs[app.state.selected_tab].state.page_block.page {
-        Page::Debug => DebugPage::draw(rect, app, parent_layout[1]),
-        _ => (),
-    }
+    let body_layout = Layout::default()
+        .direction(tui::layout::Direction::Horizontal)
+        .constraints([Constraint::Length(30), Constraint::Min(1)].as_ref())
+        .split(parent_layout[1]);
+
+    draw_sidebar(rect, app, body_layout[0]);
+
+    draw_page_window_block(rect, app, body_layout[1]);
+
+    app.state.tabs[app.state.selected_tab]
+        .state
+        .page_block
+        .draw_page(rect, app, body_layout[1]);
 
     draw_notifications_footer(rect, app, parent_layout[2]);
 }
@@ -77,6 +87,102 @@ where
         .alignment(tui::layout::Alignment::Left);
 
     f.render_widget(tabs, layout_chunk);
+}
+
+pub fn draw_sidebar<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+where
+    B: Backend,
+{
+    let sidebar_block = Block::default()
+        .borders(Borders::ALL)
+        .title(Span::styled(
+            " Sidebar ",
+            Style::default()
+                .fg(Color::LightCyan)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .border_style(
+            if let Some(Window::SidebarWindow) =
+                app.state.tabs[app.state.selected_tab].state.active_window
+            {
+                Style::default().fg(Color::LightCyan)
+            } else if let Some(Window::SidebarWindow) =
+                app.state.tabs[app.state.selected_tab].state.hovered_window
+            {
+                Style::default().fg(Color::Magenta)
+            } else {
+                Style::default()
+            },
+        );
+
+    let mut items = Page::iterator()
+        .map(|page| ListItem::new(page.to_string()))
+        .collect::<Vec<ListItem>>();
+
+    items[app.state.tabs[app.state.selected_tab].state.sidebar_hover] = items
+        [app.state.tabs[app.state.selected_tab].state.sidebar_hover]
+        .clone()
+        .style(
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    let sidebar_list = List::new(items)
+        .block(sidebar_block)
+        .style(Style::default().fg(Color::White))
+        .highlight_style(
+            Style::default()
+                .fg(Color::LightCyan)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ");
+
+    let active_page = app.state.tabs[app.state.selected_tab].state.page_block.page;
+
+    let active_page_index = Page::iterator()
+        .position(|page| page.to_string() == active_page.to_string())
+        .unwrap();
+
+    let mut list_state = ListState::default();
+    list_state.select(Some(active_page_index));
+
+    f.render_stateful_widget(sidebar_list, layout_chunk, &mut list_state);
+}
+
+pub fn draw_page_window_block<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+where
+    B: Backend,
+{
+    let page_title = app.state.tabs[app.state.selected_tab]
+        .state
+        .page_block
+        .page
+        .to_string();
+
+    let page_window_block = Block::default()
+        .borders(Borders::ALL)
+        .title(Span::styled(
+            format!(" {} ", page_title),
+            Style::default()
+                .fg(Color::LightCyan)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .border_style(
+            if let Some(Window::PageWindow) =
+                app.state.tabs[app.state.selected_tab].state.active_window
+            {
+                Style::default().fg(Color::LightCyan)
+            } else if let Some(Window::PageWindow) =
+                app.state.tabs[app.state.selected_tab].state.hovered_window
+            {
+                Style::default().fg(Color::Magenta)
+            } else {
+                Style::default()
+            },
+        );
+
+    f.render_widget(page_window_block, layout_chunk)
 }
 
 pub fn draw_notifications_footer<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)

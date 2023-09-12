@@ -3,9 +3,9 @@ use std::{
     slice::Iter,
 };
 
-use tui::widgets::Borders;
+use tui::{backend::Backend, layout::Rect, widgets::Borders, Frame};
 
-use crate::input::Key;
+use crate::{app::App, input::Key};
 pub use debug::DebugPage;
 
 mod debug;
@@ -72,17 +72,31 @@ pub struct PageBlock {
 }
 
 impl PageBlock {
-    pub fn init_page(mut self) -> Self {
-        // fill inner blocks
+    pub fn new(page: Page) -> Self {
+        PageBlock {
+            page,
+            block: Block::default(page.to_string(), BlockType::ContainerBlock),
+        }
+        .init_page()
+    }
+
+    fn init_page(mut self) -> Self {
         match self.page {
             Page::Debug => DebugPage::fill_inner_blocks(&mut self.block),
             _ => (),
         }
 
-        self.block.select_border();
-        self.block.hover_first_block();
-
         return self;
+    }
+
+    pub fn draw_page<B>(&self, f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+    where
+        B: Backend,
+    {
+        match self.page {
+            Page::Debug => DebugPage::draw(f, app, layout_chunk),
+            _ => (),
+        }
     }
 }
 
@@ -312,7 +326,10 @@ impl Block {
             ref mut hovered_block,
         } = self.content
         {
-            // what if innerblocks.len() is 0
+            if inner_blocks.len() == 0 {
+                return;
+            }
+
             if hovered_block.is_none() {
                 *hovered_block = Some(0);
             }
